@@ -1,0 +1,5 @@
+molecule
+molecule-docker
+molecule-podman
+jmespath
+ansible-compat>=24.0.0

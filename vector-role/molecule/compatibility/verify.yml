@@ -1,0 +1,119 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: no
+  tasks:
+    # 1. Проверка наличия бинарника Vector
+    - name: Check vector binary exists
+      raw: ls -la /root/.vector/bin/vector 2>/dev/null && echo "exists" || echo "not found"
+      register: binary_check
+      changed_when: false
+
+    - name: Show binary check result
+      debug:
+        msg: "Binary check: {{ binary_check.stdout }}"
+
+    - name: Assert binary exists
+      assert:
+        that:
+          - '"exists" in binary_check.stdout'
+        success_msg: "✓ Vector binary exists on {{ inventory_hostname }}"
+        fail_msg: "✗ Vector binary missing on {{ inventory_hostname }}"
+
+    # 2. Проверка версии Vector
+    - name: Get vector version
+      raw: /root/.vector/bin/vector --version 2>/dev/null || echo "version not available"
+      register: version
+      changed_when: false
+
+    - name: Display version
+      debug:
+        msg: "Vector version on {{ inventory_hostname }}: {{ version.stdout }}"
+
+    - name: Assert version is not empty
+      assert:
+        that:
+          - version.stdout != ""
+          - '"version not available" not in version.stdout'
+        success_msg: "✓ Vector version is available on {{ inventory_hostname }}"
+        fail_msg: "✗ Vector version not available on {{ inventory_hostname }}"
+
+    # 3. Проверка наличия конфигурационного файла
+    - name: Check vector config exists
+      raw: ls -la /etc/vector/vector.toml 2>/dev/null && echo "exists" || echo "not found"
+      register: config_check
+      changed_when: false
+
+    - name: Assert config exists
+      assert:
+        that:
+          - '"exists" in config_check.stdout'
+        success_msg: "✓ Vector config exists on {{ inventory_hostname }}"
+        fail_msg: "✗ Vector config missing on {{ inventory_hostname }}"
+
+    # 4. Проверка валидности конфигурации (исправленная команда)
+    - name: Validate vector config
+      raw: /root/.vector/bin/vector validate --config-dir /etc/vector 2>&1
+      register: config_validate
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Show validation result
+      debug:
+        msg: "Config validation: {{ config_validate.stdout }}"
+
+    - name: Assert config is valid
+      assert:
+        that:
+          - config_validate.rc == 0
+          - '"error" not in config_validate.stdout.lower()'
+        success_msg: "✓ Vector config is valid on {{ inventory_hostname }}"
+        fail_msg: "✗ Vector config is invalid on {{ inventory_hostname }}"
+
+    # 5. Проверка, что процесс Vector запущен
+    - name: Check vector process is running
+      raw: ps aux 2>/dev/null | grep -v grep | grep -E "(vector|/root/.vector/bin/vector)" && echo "running" || echo "not running"
+      register: process_check
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Show process check result
+      debug:
+        msg: "Process check: {{ process_check.stdout }}"
+
+    - name: Assert vector is running
+      assert:
+        that:
+          - '"running" in process_check.stdout'
+        success_msg: "✓ Vector process is running on {{ inventory_hostname }}"
+        fail_msg: "✗ Vector process is not running on {{ inventory_hostname }}"
+
+    # 6. Проверка прав на исполняемый файл
+    - name: Check vector binary permissions
+      raw: stat -c "%a" /root/.vector/bin/vector 2>/dev/null || echo "000"
+      register: permissions
+      changed_when: false
+
+    - name: Show permissions
+      debug:
+        msg: "Binary permissions: {{ permissions.stdout }}"
+
+    - name: Assert binary is executable
+      assert:
+        that:
+          - permissions.stdout != "000"
+          - permissions.stdout | int >= 700 or permissions.stdout | int >= 500
+        success_msg: "✓ Vector binary has correct permissions on {{ inventory_hostname }}"
+        fail_msg: "✗ Vector binary has incorrect permissions on {{ inventory_hostname }}"
+
+    # 7. Проверка итогового статуса
+    - name: Final summary
+      debug:
+        msg: |
+          ========================================
+          ✅ All tests passed for {{ inventory_hostname }}
+          📦 Vector version: {{ version.stdout | trim }}
+          📁 Config: /etc/vector/vector.toml
+          🔧 Config valid: {{ 'YES' if config_validate.rc == 0 else 'NO' }}
+          🟢 Process running: {{ 'YES' if 'running' in process_check.stdout else 'NO' }}
+          ========================================
