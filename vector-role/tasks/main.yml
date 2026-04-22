@@ -1,0 +1,43 @@
+---
+- name: Install dependencies
+  apt:
+    name:
+      - curl
+      - tar
+    update_cache: yes
+    state: present
+
+- name: Download Vector install script
+  get_url:
+    url: https://sh.vector.dev
+    dest: /tmp/install_vector.sh
+    mode: '0755'
+
+- name: Install Vector using official script
+  command: bash /tmp/install_vector.sh -y
+  environment:
+    VECTOR_VERSION: "0.38.0"
+
+- name: Ensure Vector config directory exists
+  file:
+    path: /etc/vector
+    state: directory
+    mode: '0755'
+
+- name: Copy Vector config
+  copy:
+    content: |
+      [sources.demo_log]
+      type = "demo_logs"
+      format = "apache_common"
+
+      [sinks.print]
+      type = "console"
+      inputs = ["demo_logs"]
+      encoding.codec = "text"
+    dest: /etc/vector/vector.toml
+
+- name: Start Vector
+  command: /root/.vector/bin/vector --config /etc/vector/vector.toml
+  async: 10
+  poll: 0

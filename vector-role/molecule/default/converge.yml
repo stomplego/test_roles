@@ -1,0 +1,53 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Install Python and curl (universal)
+      raw: |
+        if command -v apt >/dev/null 2>&1; then
+          apt update
+          apt install -y python3 curl
+        elif command -v yum >/dev/null 2>&1; then
+          yum install -y python3 curl
+        elif command -v dnf >/dev/null 2>&1; then
+          dnf install -y python3 curl
+        fi
+      register: install_result
+      changed_when: false
+
+    - name: Download Vector install script
+      raw: curl -L -o /tmp/install_vector.sh https://sh.vector.dev
+      changed_when: false
+
+    - name: Install Vector
+      raw: bash /tmp/install_vector.sh -y
+      changed_when: false
+
+    - name: Create config directory
+      raw: mkdir -p /etc/vector
+      changed_when: false
+
+    - name: Create data directory
+      raw: mkdir -p /var/lib/vector
+      changed_when: false
+
+    - name: Create Vector config
+      raw: |
+        cat > /etc/vector/vector.toml << 'VECTOR_EOF'
+        data_dir = "/var/lib/vector"
+
+        [sources.demo_log]
+        type = "demo_logs"
+        format = "apache_common"
+
+        [sinks.print]
+        type = "console"
+        inputs = ["demo_log"]
+        encoding.codec = "text"
+        VECTOR_EOF
+      changed_when: false
+
+    - name: Start Vector
+      raw: /root/.vector/bin/vector --config /etc/vector/vector.toml &
+      changed_when: false

@@ -1,0 +1,28 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: ubuntu-22-04
+    image: ubuntu:22.04
+    pre_build_image: yes
+    command: /bin/bash -c "while true; do sleep 1; done"
+    privileged: false
+
+  - name: ubuntu-latest
+    image: ubuntu:latest
+    pre_build_image: yes
+    command: /bin/bash -c "while true; do sleep 1; done"
+    privileged: false
+
+  - name: oraclelinux-8
+    image: oraclelinux:8
+    pre_build_image: yes
+    command: /bin/bash -c "while true; do sleep 1; done"
+    privileged: false
+
+provisioner:
+  name: ansible
+verifier:
+  name: ansible

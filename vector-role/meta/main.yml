@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: vector_role
+  namespace: netology
+  author: student
+  description: Role for installing Vector
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+  galaxy_tags:
+    - vector
+    - logging
+dependencies: []

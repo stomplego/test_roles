@@ -1,0 +1,4 @@
+---
+- name: restart vector
+  command: pkill vector || true
+  listen: "restart vector"
